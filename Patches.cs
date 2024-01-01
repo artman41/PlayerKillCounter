@@ -15,13 +15,10 @@ namespace PlayerKillCounter {
             [HarmonyPatch(typeof(StartOfRound), "Start")]
             [HarmonyPrefix]
             public static bool Start_Pre(StartOfRound __instance) {
-                if (__instance.GetComponent<KillCounter>() != null) {
-                    Mod.Logger.LogInfo($"StartOfRound already has the KillCounter behaviour!");
-                } else {
-                    Mod.Logger.LogInfo($"StartOfRound does not have the KillCounter behaviour!");
+                if (__instance.GetComponent<KillCounter>() == null)
                     __instance.gameObject.AddComponent<KillCounter>();
-                    Mod.Logger.LogInfo($"StartOfRound was given the KillCounter behaviour!");
-                }
+                if (__instance.GetComponent<RPCHandler>() == null)
+                    __instance.gameObject.AddComponent<RPCHandler>();
                 return true;
             }
 
@@ -38,16 +35,16 @@ namespace PlayerKillCounter {
             [HarmonyPrefix]
             public static bool WritePlayerNotes(StartOfRound __instance) {
                 var killCounter = StartOfRound.Instance.GetComponent<KillCounter>();
-                Mod.Logger.LogInfo($"killedByDict: [{killCounter.KilledBy.Keys.Join(o => o.ToString())}]");
+                Mod.Logger.LogInfo($"killedByDict: [{killCounter}]");
                 for (int i = 0; i < __instance.gameStats.allPlayerStats.Length; ++i) {
                     var playerId = __instance.allPlayerScripts[i].playerClientId;
-                    if (!killCounter.KilledBy.ContainsKey(playerId)) 
+                    if (!killCounter.ContainsPlayerClientId(playerId)) 
                         continue;
-                    var killedBy = killCounter.KilledBy[playerId];
+                    var killedBy = killCounter[playerId];
                     var killer = __instance.allPlayerScripts.First(player => player.playerClientId == killedBy.KillerClientId);
                     __instance.gameStats.allPlayerStats[i].playerNotes.Add($"Killed by {(killer != null ? killer.playerUsername : "[UNKNOWN]")} via '{killedBy.CauseOfDeath.ToString()}'");
                 }
-                killCounter.KilledBy.Clear();
+                killCounter.Clear();
 
                 return true;
             }
@@ -108,9 +105,9 @@ namespace PlayerKillCounter {
                             continue;
                         }
                         var killCounter = StartOfRound.Instance.GetComponent<KillCounter>();
-                        if (killCounter.KilledBy.ContainsKey(player.playerClientId))
+                        if (killCounter.ContainsPlayerClientId(player.playerClientId))
                             continue;
-                        killCounter.KilledBy.Add(player.playerClientId, new KillCounter.Info{KillerClientId = behaviour.TriggeredByClientId, CauseOfDeath = CauseOfDeath.Blast});
+                        killCounter.Add(player.playerClientId, new KillCounter.Info{KillerClientId = behaviour.TriggeredByClientId, CauseOfDeath = CauseOfDeath.Blast});
                     }
                 } catch (Exception ex) {
                     __instance.LogError($"Failed to run Landmine 'ExplodeMineClientRpc' Prefixes! {ex} {new StackTrace(ex)}");
@@ -173,6 +170,15 @@ namespace PlayerKillCounter {
                         continue;
                     yield return t.gameObject.GetComponent<PlayerControllerB>();
                 }
+            }
+        }
+
+        public static class PlayerControllerBPatches {
+            [HarmonyPatch(typeof(PlayerControllerB), "DamagePlayerFromOtherClientClientRpc")]
+            [HarmonyPrefix]
+            public static void DamagePlayerFromOtherClientClientRpc(PlayerControllerB __instance, int damageAmount, Vector3 hitDirection, int playerWhoHit, int newHealthAmount) {
+                if(newHealthAmount <= 0)
+                    KillCounter.Instance.Add(__instance.playerClientId, new KillCounter.Info{KillerClientId = (ulong)playerWhoHit, CauseOfDeath = CauseOfDeath.Bludgeoning});
             }
         }
     }
