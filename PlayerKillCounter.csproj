@@ -677,12 +677,16 @@
     <ItemGroup>
         <Compile Include="Behaviours\KillCounter.cs" />
         <Compile Include="Behaviours\LandmineTriggeredBy.cs" />
+        <Compile Include="Behaviours\RPCHandler.cs" />
         <Compile Include="Extensions\LandmineExtensions.cs" />
         <Compile Include="ICausedBy.cs" />
         <Compile Include="Mod.cs" />
         <Compile Include="Patches.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="Statics.cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <Content Include="README.md" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
     <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
